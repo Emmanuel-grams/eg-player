@@ -22,7 +22,7 @@ try {
     New-Item -ItemType Directory -Force "$out\bin" | Out-Null
     Copy-Item "$root\bin\*" "$out\bin" -Force
     Copy-Item "$root\assets" "$out" -Recurse -Force
-    Copy-Item "$root\README.md" "$out" -Force
+    Copy-Item "$root\README.md", "$root\LICENSE" "$out" -Force
     $size = (Get-ChildItem -Recurse $out | Measure-Object Length -Sum).Sum / 1MB
     Write-Host ("Built EG Player {0}: {1}\EGPlayer.exe  ({2:N0} MB folder)" -f $version, $out, $size)
 } finally {

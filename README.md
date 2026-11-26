@@ -189,6 +189,10 @@ release.ps1        version → exe → installer → latest.json → GitHub Rele
   play backwards, and EG Player then tells you to step with `←` instead.
 - Stream-copy export cuts on keyframes. Use a lossless re-encode preset for frame-exact lossless cuts.
 
-## Licences
+## Licence
 
-libmpv and FFmpeg are GPL/LGPL; the builds used here are GPL. Qt for Python is LGPL.
+EG Player is free software under the [GNU General Public License v3.0](LICENSE).
+
+It bundles GPL builds of libmpv ([shinchiro/mpv-winbuild-cmake](https://github.com/shinchiro/mpv-winbuild-cmake))
+and FFmpeg ([BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds)), and uses Qt for Python
+(LGPL).
