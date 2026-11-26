@@ -1,0 +1,13 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Downloaded by setup.ps1 (libmpv + FFmpeg, ~300 MB)
+bin/
+
+# Build output (build.ps1 / release.ps1)
+build/
+dist/
+releases/
+installer/assoc.iss
