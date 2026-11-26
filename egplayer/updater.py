@@ -110,6 +110,9 @@ def _check_github(repo: str) -> UpdateInfo:
     except UpdateError as e:
         if "404" in str(e):
             raise UpdateError(f"No published release was found for GitHub repository {repo}.") from e
+        if "403" in str(e) or "429" in str(e):
+            raise UpdateError("GitHub's limit for update checks from this network was reached. "
+                              "Try again in an hour.") from e
         raise
     assets = rel.get("assets") or []
     inst = next((a for a in assets if INSTALLER_RE.match(a.get("name", ""))), None)
