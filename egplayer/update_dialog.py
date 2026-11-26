@@ -1,6 +1,7 @@
 """'Check for updates' dialog: shows the latest version, downloads and runs the installer."""
 from __future__ import annotations
 
+import subprocess
 import sys
 import threading
 import time
@@ -12,6 +13,16 @@ from PySide6.QtWidgets import (QCheckBox, QDialog, QFileDialog, QGroupBox, QHBox
 
 from . import updater
 from .version import DEFAULT_UPDATE_SOURCE, __version__
+
+
+# Access denied / virus detected / blocked by policy: what antivirus and Windows security return when
+# they stop a new, unsigned program from running.
+BLOCKED_ERRORS = {5, 225, 1260, 4551, 4556}
+BLOCKED_TEXT = ("Your antivirus or Windows security blocked the installer. It's a new program that "
+                "isn't code-signed, so some antivirus products (Avast's CyberCapture, for example) hold it "
+                "back to analyse it first. Allow it in your antivirus, or wait until it has finished "
+                "checking, then click Download and install again. You can also click Show installer and "
+                "run it yourself.")
 
 
 def update_source(qs) -> str:
@@ -32,6 +43,7 @@ class UpdateDialog(QDialog):
         self.set_updating = set_updating
         self.finish_install = finish_install
         self._proc = None
+        self._installer: Path | None = None
         self._poll = QTimer(self, interval=1000, timeout=self._poll_installer)
         self._launched.connect(self._on_launched)
         self.info: updater.UpdateInfo | None = None
@@ -82,13 +94,17 @@ class UpdateDialog(QDialog):
 
         btns = QHBoxLayout()
         self.btn_check = QPushButton("Check now")
+        self.btn_show = QPushButton("Show installer")
+        self.btn_show.setToolTip("Open the downloaded installer's folder, so you can run it yourself")
+        self.btn_show.setVisible(False)
         self.btn_close = QPushButton("Close")
         self.btn_install = QPushButton("Download and install")
         self.btn_install.setProperty("accent", True)
         self.btn_install.setEnabled(False)
-        for b in (self.btn_check, self.btn_close, self.btn_install):
+        for b in (self.btn_check, self.btn_show, self.btn_close, self.btn_install):
             b.setAutoDefault(False)
         btns.addWidget(self.btn_check)
+        btns.addWidget(self.btn_show)
         btns.addStretch(1)
         btns.addWidget(self.btn_close)
         btns.addWidget(self.btn_install)
@@ -96,6 +112,7 @@ class UpdateDialog(QDialog):
 
         browse.clicked.connect(self._browse)
         self.btn_check.clicked.connect(self.check)
+        self.btn_show.clicked.connect(self._show_installer)
         self.btn_close.clicked.connect(self._close)
         self.btn_install.clicked.connect(self._install)
         self.auto.toggled.connect(lambda on: self.qs.setValue("update/auto", on))
@@ -192,6 +209,8 @@ class UpdateDialog(QDialog):
         self.bar.setRange(0, 0)  # busy: Windows scans a fresh installer before it may run
         self._set_status("Starting the installer… (Windows may take a few seconds to scan it)")
         self.btn_close.setEnabled(False)
+        self.btn_show.setVisible(False)
+        self._installer = Path(path)
         self._downloading = True
         threading.Thread(target=self._launch, args=(Path(path),), daemon=True).start()
 
@@ -199,7 +218,14 @@ class UpdateDialog(QDialog):
         try:
             self._launched.emit(updater.launch_installer(path), "")
         except OSError as e:
-            self._launched.emit(None, str(e))
+            if getattr(e, "winerror", None) in BLOCKED_ERRORS:
+                self._launched.emit(None, BLOCKED_TEXT)
+            else:
+                self._launched.emit(None, f"Could not start the installer: {e}")
+
+    def _show_installer(self):
+        if self._installer and self._installer.exists():
+            subprocess.Popen(f'explorer /select,"{self._installer}"')
 
     def _on_launched(self, proc, err):
         if err:
@@ -208,7 +234,9 @@ class UpdateDialog(QDialog):
             self.bar.setVisible(False)
             self.bar.setRange(0, 1000)
             self.btn_install.setEnabled(True)
-            self._set_status(f"Could not start the installer: {err}", "#e07070")
+            self.btn_check.setEnabled(True)
+            self.btn_show.setVisible(True)
+            self._set_status(err, "#e07070")
             return
         self._proc = proc
         self.set_updating(True)
@@ -230,7 +258,10 @@ class UpdateDialog(QDialog):
         self.btn_install.setEnabled(True)
         self.bar.setVisible(False)
         self.bar.setRange(0, 1000)
-        self._set_status(f"The installer stopped (exit code {code}); nothing was changed.", "#e07070")
+        self.btn_show.setVisible(True)
+        self._set_status(f"The installer stopped (exit code {code}) and nothing was changed. If your "
+                         "antivirus reported the installer, allow it there and try again, or click Show "
+                         "installer and run it yourself.", "#e07070")
 
     def _close(self):
         if self._downloading:

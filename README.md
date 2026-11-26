@@ -83,9 +83,16 @@ installed gets them. The **update source** can be changed in that dialog:
 | A folder (local or network share) | `D:\Claude Code\EG-Videoplayer\releases`, or any folder `release.ps1` wrote |
 | A URL to a manifest | `https://example.com/egplayer/latest.json` |
 
-Note: the first start after an update can take up to about a minute. Microsoft Defender checks
-each new unsigned `EGPlayer.exe` before it runs; later starts take about 1 s. Signing the exe with
-a code-signing certificate removes that delay.
+EG Player isn't code-signed, so security software treats each new version as an unknown program:
+
+- **Antivirus may hold the installer back.** Avast's CyberCapture, for example, blocks new unsigned
+  programs downloaded from the internet until it has analysed them. The update dialog then says the
+  installer was blocked. Allow the file in your antivirus, or wait for its check to finish, and click
+  **Download and install** again. Or click **Show installer** and run it yourself.
+- **The first start after an update can take up to about a minute** while Microsoft Defender checks
+  the new `EGPlayer.exe`. Later starts take about 1 s.
+
+Signing the installer and the exe with a code-signing certificate removes both.
 
 ## Making a new version
 
